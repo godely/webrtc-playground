@@ -1,25 +1,28 @@
-var http = require("http");
+var express = require('express');
+var http = require('http');
+var app = express();
 
-function start() {
-	function onRequest(request, response) {
-		console.log("Request received.");
-	    response.writeHead(200, {"Content-Type": "text/plain"});
-	    response.write("Hello World");
-	    response.end();
+app.configure(function(){
+	app.set('port', 8080);
+	app.set('views', __dirname + '/app/server/views');
+	app.set('view engine', 'jade');
+	app.locals.pretty = true;
+//	app.use(express.favicon());
+//	app.use(express.logger('dev'));
+	app.use(express.bodyParser());
+	app.use(express.cookieParser());
+	app.use(express.session({ secret: 'super-duper-secret-secret' }));
+	app.use(express.methodOverride());
+	app.use(require('stylus').middleware({ src: __dirname + '/app/public' }));
+	app.use(express.static(__dirname + '/app/public'));
+});
 
-	    /*if (url.parse(request.url).pathname == "login") {
-	    	login(request,response);
-	    }*/
-	}
+app.configure('development', function(){
+	app.use(express.errorHandler());
+});
 
-	http.createServer(onRequest).listen(8888);
-	console.log("Server has started.");
-}
+require('./app/server/router')(app);
 
-exports.start = start;
-
-
-function login(request, response) {
-	var names = url.parse(request.url).query;
-	querystring(names)["user"];
-}
+http.createServer(app).listen(app.get('port'), function() {
+	console.log("Express server listening on port " + app.get('port'));
+})

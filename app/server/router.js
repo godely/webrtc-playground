@@ -44,7 +44,7 @@ module.exports = function(app) {
 	    if (req.session.user == null){
 	// if user is not logged-in redirect back to login page //
 	        res.redirect('/');
-	    }   else{
+	    } else {
 			res.render('home', {
 				title : 'Control Panel',
 				countries : CT,
@@ -87,17 +87,18 @@ module.exports = function(app) {
 		res.render('signup', {  title: 'Signup', countries : CT });
 	});
 	
-	app.post('/signup', function(req, res){
+	app.post('/signup', function(req, res) {
 		AM.addNewAccount({
 			name 	: req.param('name'),
 			email 	: req.param('email'),
 			user 	: req.param('user'),
 			pass	: req.param('pass'),
-			country : req.param('country')
-		}, function(e){
+			country : req.param('country'),
+			onchat	: 0
+		}, function(e) {
 			if (e){
 				res.send(e, 400);
-			}	else{
+			} else {
 				res.send('ok', 200);
 			}
 		});
@@ -179,6 +180,69 @@ module.exports = function(app) {
 		AM.delAllRecords(function(){
 			res.redirect('/print');	
 		});
+	});
+
+	app.get('/chat', function(req, res) {
+		if (req.cookies.user == undefined || req.cookies.pass == undefined) {
+			res.send('error', 404);
+		} else {
+			AM.autoLogin(req.cookies.user, req.cookies.pass, function(o) {
+				if (o != null) {
+					req.session.user = o;
+					AM.updateOnlineStatus(o.user, function(e,o) {
+						if (e) {
+							res.send('error', 404);
+						} else {
+							AM.getOnlineUsers(function(e,o) {
+								if (e) {
+									res.redirect('/');
+								} else {
+									var usernames = {"uns" : []};
+									for (var i in o) {
+										usernames.uns.push({username: o[i].user});
+									}
+									res.render('chat', usernames);
+								}
+							});
+						}
+					});
+				} else {
+					res.send('error', 404);
+				}
+			});
+		}
+	});
+
+	app.get('/ping_status', function(req, res) {
+		/*if (req.cookies.user == undefined || req.cookies.pass == undefined) {
+			res.send('error', 404);
+		} else {
+			AM.autoLogin(req.cookies.user, req.cookies.pass, function(o) {
+				if (o != null) {
+					req.session.user = o;
+					AM.updateOnlineStatus(o.user, function(e,o) {
+						if (e) {
+							res.send('error', 404);
+						} else {
+							AM.getOnlineUsers(function(e,o) {
+								if (e) {
+									res.redirect('/');
+								} else {
+									var usernames = {"uns" : []};
+									for (var i in o) {
+										usernames.uns.push({username: o[i].user});
+									}
+									console.log(usernames);
+									res.render('chat', usernames);
+								}
+							});
+						}
+					});
+				} else {
+					res.send('error', 404);
+				}
+			});
+		}*/
 	});
 	
 	app.get('*', function(req, res) { res.render('404', { title: 'Page Not Found'}); });

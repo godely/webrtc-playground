@@ -1,0 +1,11 @@
+extends layout
+
+block content
+	for item in uns
+		li= item.username
+
+
+block scripts
+	script(src='/vendor/jquery.min.js')
+	script(src='/vendor/jquery.form.js')
+	script(src='/js/views/chat.js')

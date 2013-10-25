@@ -49,17 +49,16 @@ exports.manualLogin = function(user, pass, callback) {
 
 /* record insertion, update & deletion methods */
 
-exports.addNewAccount = function(newData, callback)
-{
+exports.addNewAccount = function(newData, callback) {
 	accounts.findOne({user:newData.user}, function(e, o) {
-		if (o){
+		if (o) {
 			callback('username-taken');
-		}	else{
+		} else {
 			accounts.findOne({email:newData.email}, function(e, o) {
-				if (o){
+				if (o) {
 					callback('email-taken');
-				}	else{
-					saltAndHash(newData.pass, function(hash){
+				} else {
+					saltAndHash(newData.pass, function(hash) {
 						newData.pass = hash;
 					// append date stamp when record was created //
 						newData.date = moment().format('MMMM Do YYYY, h:mm:ss a');
@@ -99,7 +98,7 @@ exports.updatePassword = function(email, newPass, callback)
 	accounts.findOne({email:email}, function(e, o){
 		if (e){
 			callback(e, null);
-		}	else{
+		} else {
 			saltAndHash(newPass, function(hash){
 		        o.pass = hash;
 		        accounts.save(o, {safe: true}, callback);
@@ -195,4 +194,27 @@ var findByMultipleFields = function(a, callback)
 		if (e) callback(e)
 		else callback(null, results)
 	});
+}
+
+// Personal methods
+
+exports.updateOnlineStatus = function(user, callback) {
+	accounts.findOne({user:user}, function(e, o) {
+		if (e) {
+			callback(e, null);
+		} else {
+			var curTime = new Date().getTime();
+			o.onchat = new Date(curTime + 180000);
+			accounts.save(o, {save: true}, callback);
+		}
+	});
+}
+
+exports.getOnlineUsers = function(callback) {
+	accounts.find({onchat: {$gte: new Date()}}).toArray(
+		function(e, results) {
+			if (e) callback(e)
+			else callback(null, results)
+		}
+	);
 }

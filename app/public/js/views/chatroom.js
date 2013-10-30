@@ -19,11 +19,11 @@ var pc_config = webrtcDetectedBrowser === 'firefox' ?
   {'iceServers':[{'url':'stun:23.21.150.121'}]} : // number IP
   {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
 
-var pc_constraints = {
-  'optional': [
+  var pc_constraints = {
+    'optional': [
     {'DtlsSrtpKeyAgreement': true},
     {'RtpDataChannels': true}
-  ]};
+    ]};
 
 // Set up audio and video regardless of what devices are present.
 var sdpConstraints = {'mandatory': {
@@ -32,13 +32,13 @@ var sdpConstraints = {'mandatory': {
 
 /////////////////////////////////////////////
 
-/*var room = location.pathname.substring(1);
+var room = location.pathname.substring(1);
 if (room === '') {
 //  room = prompt('Enter room name:');
-  room = 'foo';
+room = 'foo';
 } else {
   //
-}*/
+}
 
 var my_username = document.getElementById("getUsername").value;
 
@@ -51,8 +51,8 @@ socket.emit('stablish name', my_username);
   socket.emit('create or join', room);
 }*/
 
-socket.on('created', function (room){
-  console.log('Created room ' + room);
+socket.on('invited', function (room){
+  console.log('Invited user and created room ' + room);
   isInitiator = true;
 });
 
@@ -70,13 +70,21 @@ socket.on('joined', function (room){
   console.log('This peer has joined room ' + room);
 });
 
-socket.on('invitation', function (from_user) {
-  prompt("O usuario " + from_user + " deseja conversar com você. Você aceita?");
+socket.on('invitation', function (details) {
+  //prompt("O usuario " + from_user + " deseja conversar com você. Você aceita?");
+  var confirmou = confirm("O usuario " + details.from + " deseja conversar com você. Você aceita?");
+  if (confirmou){
+    socket.emit('join', details);
+  }
 });
 
 socket.on('log', function (array) {
   console.log.apply(console, array);
 });
+
+function inviteUser(to_username) {
+  socket.emit('create', {from: my_username, to: to_username, room: my_username});
+}
 
 ////////////////////////////////////////////////
 
@@ -108,10 +116,6 @@ socket.on('message', function (message){
 
 requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 
-function inviteUser(to_username) {
-  socket.emit('invite user', {from: my_username, to: to_username});
-}
-
 function maybeStart() {
   if (!isStarted) {
     console.log('Is starting!');
@@ -141,7 +145,7 @@ function createPeerConnection() {
   } catch (e) {
     console.log('Failed to create PeerConnection, exception: ' + e.message);
     alert('Cannot create RTCPeerConnection object.');
-      return;
+    return;
   }
 
   if (isInitiator) {
@@ -152,35 +156,48 @@ function createPeerConnection() {
       trace('Created send data channel');
     } catch (e) {
       alert('Failed to create data channel. ' +
-            'You need Chrome M25 or later with RtpDataChannel enabled');
+        'You need Chrome M25 or later with RtpDataChannel enabled');
       trace('createDataChannel() failed with exception: ' + e.message);
     }
     sendChannel.onopen = handleSendChannelStateChange;
     sendChannel.onclose = handleSendChannelStateChange;
-    sendChannel.onmessage = handleMessage;
+    sendChannel.onmessage = receiveData;
   } else {
     pc.ondatachannel = gotReceiveChannel;
   }
 }
 
 function sendData() {
-  var data = sendTextarea.value;
+  var data = my_username + ": " + sendTextarea.value;
   if (isInitiator) sendChannel.send(data);
   else receiveChannel.send(data);
+  receiveTextarea.value += data+"\n";
+  receiveTextarea.scrollTop = receiveTextarea.scrollHeight;
   trace('Sent data: ' + data);
+}
+
+function receiveData(event) {
+  trace('Received message: ' + event.data);
+  receiveTextarea.value += event.data+"\n";
+  receiveTextarea.scrollTop = receiveTextarea.scrollHeight;
 }
 
 function gotReceiveChannel(event) {
   trace('Receive Channel Callback');
   receiveChannel = event.channel;
-  receiveChannel.onmessage = handleMessage;
+  receiveChannel.onmessage = receiveData;
   receiveChannel.onopen = handleReceiveChannelStateChange;
   receiveChannel.onclose = handleReceiveChannelStateChange;
 }
 
-function handleMessage(event) {
-  trace('Received message: ' + event.data);
-  receiveTextarea.value = event.data;
+function searchKeyPress(e){
+ console.log("apertei enter") 
+  // look for window.event in case event isn't passed in
+  if (typeof e == 'undefined' && window.event) { e = window.event; }
+  if (e.keyCode == 13)
+  {
+    sendButton.click();
+  }
 }
 
 function handleSendChannelStateChange() {
@@ -192,11 +209,11 @@ function handleSendChannelStateChange() {
     dataChannelSend.placeholder = "";
     sendButton.disabled = false;
 //    closeButton.disabled = false;
-  } else {
-    dataChannelSend.disabled = true;
-    sendButton.disabled = true;
+} else {
+  dataChannelSend.disabled = true;
+  sendButton.disabled = true;
 //    closeButton.disabled = true;
-  }
+}
 }
 
 function handleReceiveChannelStateChange() {
@@ -229,8 +246,8 @@ function doCall() {
       if (prop.indexOf('Moz') !== -1) {
         delete constraints.mandatory[prop];
       }
-     }
-   }
+    }
+  }
   constraints = mergeConstraints(constraints, sdpConstraints);
   console.log('Sending offer to peer, with constraints: \n' +
     '  \'' + JSON.stringify(constraints) + '\'.');
@@ -274,7 +291,7 @@ function requestTurn(turn_url) {
     xhr.onreadystatechange = function(){
       if (xhr.readyState === 4 && xhr.status === 200) {
         var turnServer = JSON.parse(xhr.responseText);
-      	console.log('Got TURN server: ', turnServer);
+        console.log('Got TURN server: ', turnServer);
         pc_config.iceServers.push({
           'url': 'turn:' + turnServer.username + '@' + turnServer.turn,
           'credential': turnServer.password
@@ -315,10 +332,10 @@ function preferOpus(sdp) {
   var mLineIndex;
   // Search for m line.
   for (var i = 0; i < sdpLines.length; i++) {
-      if (sdpLines[i].search('m=audio') !== -1) {
-        mLineIndex = i;
-        break;
-      }
+    if (sdpLines[i].search('m=audio') !== -1) {
+      mLineIndex = i;
+      break;
+    }
   }
   if (mLineIndex === null) {
     return sdp;

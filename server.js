@@ -57,14 +57,14 @@ io.sockets.on('connection', function (socket) {
 		}
 	}
 
+	function clearRoom(room) {
+		for(var id in io.sockets.clients(room)) {
+			io.sockets.clients(room)[id].leave(room);
+		}
+	}
+
 	socket.on('stablish name', function (username) {
 		socket.set('username', username);
-	});
-
-	socket.on('invite user', function (users) {
-		var ret = getSocketByName(users.to, function (foundSocket) {
-			foundSocket.emit('invitation', users.from);
-		});
 	});
 
 	socket.on('message', function (message) {
@@ -72,15 +72,30 @@ io.sockets.on('connection', function (socket) {
 		socket.broadcast.emit('message', message); // should be room only
 	});
 
-	socket.on('create or join', function (room) {
-		var numClients = io.sockets.clients(room).length;
+	socket.on('create', function(details) {
+		from = details.from;
+		to = details.to;
+		room = details.room;
 
-		log('Room ' + room + ' has ' + numClients + ' client(s)');
-		log('Request to create or join room', room);
-
-		if (numClients == 0){
+		var ret = getSocketByName(to, function (foundSocket) {
+			clearRoom(room);
+			log('Request to create room', room);
 			socket.join(room);
-			socket.emit('created', room);
+			socket.emit('invited', room);
+			foundSocket.emit('invitation', details);
+		});
+	});
+
+	socket.on('join', function (details) {
+		from = details.from;
+		to = details.to;
+		room = details.room;
+
+		var numClients = io.sockets.clients(room).length;
+		
+		// ver aquiiiiiiiii
+		if (numClients == 0){
+			log('Sala inválida.');
 		} else if (numClients == 1) {
 			io.sockets.in(room).emit('join', room);
 			socket.join(room);

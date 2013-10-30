@@ -3,7 +3,7 @@ extends layout
 block content
 	#container
 		#textareas
-			textarea#dataChannelSend('disabled', 'placeholder'='Press Start, enter some text, then press Send.')
+			textarea#dataChannelSend('disabled', 'placeholder'='Press Start, enter some text, then press Send.', onkeypress='searchKeyPress(event)')
 			textarea#dataChannelReceive('disabled')
 		button#sendButton('disabled')='Send'
 

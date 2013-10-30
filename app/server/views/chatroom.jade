@@ -1,0 +1,15 @@
+extends layout
+
+block content
+	#container
+		#textareas
+			textarea#dataChannelSend('disabled', 'placeholder'='Press Start, enter some text, then press Send.')
+			textarea#dataChannelReceive('disabled')
+		button#sendButton('disabled')='Send'
+
+block scripts
+	script(src='/vendor/jquery.min.js')
+	script(src='/vendor/jquery.form.js')
+	script(src='/js/lib/adapter.js')
+	script(src='/socket.io/socket.io.js')
+	script(src='/js/views/chatroom.js')

@@ -198,13 +198,14 @@ var findByMultipleFields = function(a, callback)
 
 // Personal methods
 
-exports.updateOnlineStatus = function(user, callback) {
+exports.updateOnlineStatus = function(user, inctime, callback) {
+	if (user == null) callback('error', null);
 	accounts.findOne({user:user}, function(e, o) {
-		if (e) {
+		if (o == null) {
 			callback(e, null);
 		} else {
 			var curTime = new Date().getTime();
-			o.onchat = new Date(curTime + 180000);
+			o.onchat = new Date(curTime + inctime);
 			accounts.save(o, {save: true}, callback);
 		}
 	});

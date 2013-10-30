@@ -1,11 +1,20 @@
 extends layout
 
-block content
-	for item in uns
-		li= item.username
 
+block content
+	ul#usersOnline
+	#text-chat-container
+		#textareas
+			textarea#dataChannelReceive('disabled')
+			textarea#dataChannelSend.form-control.input-lg(type='text', 'disabled', placeholder'='Press Start, enter some text, then press Send.')
+		.btn-group
+			button#sendButton.btn.btn-success('disabled')='Send'
+	input#getUsername('type'='hidden', 'value'= username)
 
 block scripts
 	script(src='/vendor/jquery.min.js')
 	script(src='/vendor/jquery.form.js')
 	script(src='/js/views/chat.js')
+	script(src='/js/lib/adapter.js')
+	script(src='/socket.io/socket.io.js')
+	script(src='/js/views/chatroom.js')

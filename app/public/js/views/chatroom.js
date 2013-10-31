@@ -17,7 +17,7 @@ var turnReady;
 
 var pc_config = webrtcDetectedBrowser === 'firefox' ?
   {'iceServers':[{'url':'stun:23.21.150.121'}]} : // number IP
-  {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+  {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}, {'url': 'turn:localhost:8080'}]};
 
   var pc_constraints = {
     'optional': [
@@ -31,14 +31,6 @@ var sdpConstraints = {'mandatory': {
   'OfferToReceiveVideo':true }};
 
 /////////////////////////////////////////////
-
-var room = location.pathname.substring(1);
-if (room === '') {
-//  room = prompt('Enter room name:');
-room = 'foo';
-} else {
-  //
-}
 
 var my_username = document.getElementById("getUsername").value;
 
@@ -78,6 +70,10 @@ socket.on('invitation', function (details) {
   }
 });
 
+socket.on('error', function (error) {
+  alert(error);
+});
+
 socket.on('log', function (array) {
   console.log.apply(console, array);
 });
@@ -89,7 +85,7 @@ function inviteUser(to_username) {
 ////////////////////////////////////////////////
 
 function sendMessage(message){
-	console.log('Sending message: ', message);
+	//console.log('Sending message: ', message);
   socket.emit('message', message);
 }
 
@@ -162,6 +158,10 @@ function createPeerConnection() {
     sendChannel.onopen = handleSendChannelStateChange;
     sendChannel.onclose = handleSendChannelStateChange;
     sendChannel.onmessage = receiveData;
+    sendChannel.onerror = function() {
+      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      console.log(arguments);
+    };
   } else {
     pc.ondatachannel = gotReceiveChannel;
   }
@@ -188,6 +188,10 @@ function gotReceiveChannel(event) {
   receiveChannel.onmessage = receiveData;
   receiveChannel.onopen = handleReceiveChannelStateChange;
   receiveChannel.onclose = handleReceiveChannelStateChange;
+  receiveChannel.onerror = function() {
+    console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    console.log(arguments);
+  };
 }
 
 function searchKeyPress(e){
@@ -209,11 +213,11 @@ function handleSendChannelStateChange() {
     dataChannelSend.placeholder = "";
     sendButton.disabled = false;
 //    closeButton.disabled = false;
-} else {
-  dataChannelSend.disabled = true;
-  sendButton.disabled = true;
-//    closeButton.disabled = true;
-}
+  } else {
+    dataChannelSend.disabled = true;
+    sendButton.disabled = true;
+  //    closeButton.disabled = true;
+  }
 }
 
 function handleReceiveChannelStateChange() {
@@ -226,7 +230,7 @@ function handleReceiveChannelStateChange() {
 }
 
 function handleIceCandidate(event) {
-  console.log('handleIceCandidate event: ', event);
+  //console.log('handleIceCandidate event: ', event);
   if (event.candidate) {
     sendMessage({
       type: 'candidate',
@@ -299,6 +303,19 @@ function requestTurn(turn_url) {
         turnReady = true;
       }
     };
+    /*$.ajax({
+      type: 'GET',
+      url: turn_url,
+      dataType: "json",
+      contentType: "json",
+      async: true,
+      success: function (json) {
+        console.log("OI");
+      },
+      error: function(e) {
+        console.log("Tchau");
+      }
+    });*/
     xhr.open('GET', turn_url, true);
     xhr.send();
   }

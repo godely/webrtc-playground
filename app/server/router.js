@@ -214,7 +214,7 @@ module.exports = function(app) {
 					} else {
 						var usernames = {"uns" : []};
 						for (var i in o) {
-							usernames.uns.push({username: o[i].user});
+							if (o[i].user !== req.cookies.user) usernames.uns.push({username: o[i].user});
 						}
 						res.json(200, usernames);
 					}

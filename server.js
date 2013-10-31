@@ -57,12 +57,6 @@ io.sockets.on('connection', function (socket) {
 		}
 	}
 
-	function clearRoom(room) {
-		for(var id in io.sockets.clients(room)) {
-			io.sockets.clients(room)[id].leave(room);
-		}
-	}
-
 	socket.on('stablish name', function (username) {
 		socket.set('username', username);
 	});
@@ -77,13 +71,16 @@ io.sockets.on('connection', function (socket) {
 		to = details.to;
 		room = details.room;
 
-		var ret = getSocketByName(to, function (foundSocket) {
-			clearRoom(room);
-			log('Request to create room', room);
-			socket.join(room);
-			socket.emit('invited', room);
-			foundSocket.emit('invitation', details);
-		});
+		if (to === from) {
+			socket.emit('error', 'Você não pode conversar consigo mesmo.');
+		} else {
+			var ret = getSocketByName(to, function (foundSocket) {
+				log('Request to create room', room);
+				socket.join(room);
+				socket.emit('invited', room);
+				foundSocket.emit('invitation', details);
+			});
+		}
 	});
 
 	socket.on('join', function (details) {
@@ -95,7 +92,7 @@ io.sockets.on('connection', function (socket) {
 		
 		// ver aquiiiiiiiii
 		if (numClients == 0){
-			log('Sala inválida.');
+			socket.emit('error', 'Sala inválida.');
 		} else if (numClients == 1) {
 			io.sockets.in(room).emit('join', room);
 			socket.join(room);

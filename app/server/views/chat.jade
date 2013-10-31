@@ -6,7 +6,7 @@ block content
 	#text-chat-container
 		#textareas
 			textarea#dataChannelReceive('disabled')
-			textarea#dataChannelSend.form-control.input-lg(type='text', 'disabled', placeholder'='Press Start, enter some text, then press Send.')
+			textarea#dataChannelSend.form-control.input-lg('type'='text', 'disabled', 'placeholder'='Press Start, enter some text, then press Send.')
 		.btn-group
 			button#sendButton.btn.btn-success('disabled')='Send'
 	input#getUsername('type'='hidden', 'value'= username)

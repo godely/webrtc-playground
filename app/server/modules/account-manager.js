@@ -157,6 +157,8 @@ var md5 = function(str) {
 	return crypto.createHash('md5').update(str).digest('hex');
 }
 
+exports.md5 = md5;
+
 var saltAndHash = function(pass, callback)
 {
 	var salt = generateSalt();
@@ -218,4 +220,14 @@ exports.getOnlineUsers = function(callback) {
 			else callback(null, results)
 		}
 	);
+}
+
+exports.authenticate = function(user, pass, callback) {
+	accounts.findOne({user: user, pass: pass}, function(e, o) {
+		if (o == null) {
+			callback(false);
+		} else {
+			callback(true);
+		}
+	});
 }

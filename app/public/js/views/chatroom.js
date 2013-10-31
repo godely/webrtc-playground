@@ -32,16 +32,19 @@ var sdpConstraints = {'mandatory': {
 
 /////////////////////////////////////////////
 
+/*var cookies = JSON.parse(document.getElementById("cookies").value);
+console.log("> ");
+console.log(cookies);*/
 var my_username = document.getElementById("getUsername").value;
+
+/*var socket = io.connect('/chat');
+
+socket.emit('connect', cookies);*/
+
 
 var socket = io.connect();
 
 socket.emit('stablish name', my_username);
-
-/*if (room !== '') {
-  console.log('Create or join room', room);
-  socket.emit('create or join', room);
-}*/
 
 socket.on('invited', function (room){
   console.log('Invited user and created room ' + room);
@@ -173,6 +176,9 @@ function sendData() {
   else receiveChannel.send(data);
   receiveTextarea.value += data+"\n";
   receiveTextarea.scrollTop = receiveTextarea.scrollHeight;
+  dataChannelSend.focus();
+  dataChannelSend.value = "";
+
   trace('Sent data: ' + data);
 }
 
@@ -303,19 +309,6 @@ function requestTurn(turn_url) {
         turnReady = true;
       }
     };
-    /*$.ajax({
-      type: 'GET',
-      url: turn_url,
-      dataType: "json",
-      contentType: "json",
-      async: true,
-      success: function (json) {
-        console.log("OI");
-      },
-      error: function(e) {
-        console.log("Tchau");
-      }
-    });*/
     xhr.open('GET', turn_url, true);
     xhr.send();
   }

@@ -1,5 +1,6 @@
 var express = require('express');
 var http = require('http');
+var AM = require('./app/server/modules/account-manager');
 var app = express();
 
 app.configure(function(){
@@ -29,15 +30,30 @@ var serv = http.createServer(app).listen(app.get('port'), function() {
 
 var io = require('socket.io').listen(serv);
 io.set('log level', 1);
+
+/*io.of('/chat').on('connection', function(socket) {
+	socket.on('connect', function(cookies) {
+		var user = cookies.user;
+		var pass = cookies.pass;
+		AM.authenticate(user, pass, function(noerror) {
+			if (noerror) {
+				socket.set('username', user);
+				socket.set('pass', pass);
+				socket.set('token', AM.md5(new Date().getTime() + user + pass));
+
+			}
+		});
+	}); 
+});*/
+
+/*var chat = io.of('/chat');
+
+chat.on('connection', function (socket) {
+	console.log('oi');
+});*/
+
+io.set('log level', 1);
 io.sockets.on('connection', function (socket) {
-
-	/*io.sockets.sockets[]
-
-	for (var socketId in io.sockets.sockets) {
-	    io.sockets.sockets[socketId].get('nickname', function(err, nickname) {
-	        console.log(nickname);
-	    });
-	}*/
 
 	function log(){
 		var array = [">>> "];

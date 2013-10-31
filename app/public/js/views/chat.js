@@ -38,4 +38,11 @@ $(document).ready(function() {
 		xmlhttp.send();
 	};
 	pingStatus();
+
+	document.getElementById("dataChannelSend").onkeydown = function (e) {
+			if (e.keyCode == 13 && !e.shiftKey) {
+				document.getElementById("sendButton").click();
+				return false;
+			}
+		}
 });

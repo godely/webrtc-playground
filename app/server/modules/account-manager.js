@@ -81,7 +81,7 @@ exports.updateAccount = function(newData, callback)
 				if (err) callback(err);
 				else callback(null, o);
 			});
-		}	else{
+		} else {
 			saltAndHash(newData.pass, function(hash){
 				o.pass = hash;
 				accounts.save(o, {safe: true}, function(err) {
@@ -185,8 +185,7 @@ var findById = function(id, callback)
 		if (e) callback(e)
 		else callback(null, res)
 	});
-};
-
+}
 
 var findByMultipleFields = function(a, callback)
 {
@@ -229,5 +228,29 @@ exports.authenticate = function(user, pass, callback) {
 		} else {
 			callback(true);
 		}
+	});
+}
+
+exports.updateToken = function(user, token, callback)
+{
+	accounts.findOne({user: user}, function(e, o){
+		if (e) {
+			callback('user not found');
+		} else {
+			o.token = token;
+			accounts.save(o, {safe: true}, function(err) {
+				if (err) callback(err);
+				else callback(null, o);
+			});
+		}
+	});
+}
+
+exports.findByUsername = function(user, callback)
+{
+	accounts.findOne({user: user},
+		function(e, res) {
+		if (e) callback(e)
+		else callback(null, res)
 	});
 }

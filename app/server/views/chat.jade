@@ -9,7 +9,7 @@ block content
 			textarea#dataChannelSend.form-control.input-lg('type'='text', 'disabled', 'placeholder'='Press Start, enter some text, then press Send.')
 		.btn-group
 			button#sendButton.btn.btn-success('disabled')='Send'
-	input#getUsername('type'='hidden', 'value'= username)
+	input#cookies('type'='hidden', 'value'= JSON.stringify(cookies))
 
 block scripts
 	script(src='/vendor/jquery.min.js')

@@ -15,7 +15,7 @@ module.exports = function(app) {
 			AM.autoLogin(req.cookies.user, req.cookies.pass, function(o) {
 				if (o != null){
 				    req.session.user = o;
-					res.redirect('/chat');
+					res.redirect('/home');
 				} else {
 					res.render('login', { title: 'Hello - Please Login To Your Account' });
 				}
@@ -33,7 +33,7 @@ module.exports = function(app) {
 					res.cookie('user', o.user, { maxAge: 900000 });
 					res.cookie('pass', o.pass, { maxAge: 900000 });
 				}
-				res.send(o, 200);
+				res.redirect('/home');
 			}
 		});
 	});
@@ -193,7 +193,7 @@ module.exports = function(app) {
 						if (e) {
 							res.redirect('/');
 						} else {
-							res.render('chat', {username: req.session.user.user} );
+							res.render('chat', {cookies: req.cookies} );
 						}
 					});
 				} else {

@@ -36,11 +36,6 @@ var user_name;
 var user_token;
 var room;
 
-function resetToDefault() {
-	isInitiator = isStarted = false;
-	room = null;
-}
-
 var cookies = JSON.parse(document.getElementById("cookies").value);
 console.log(cookies);
 
@@ -59,12 +54,13 @@ socket.on('success', function(msg) {
 	// INVITED TO JOIN A ROOM
 	if (msg.invited) {
 		var accepted = confirm(msg.text);
-		socket.emit('accept or reject invite', {'accepted': accepted, 'token': msg.from_token});
+		socket.emit('accept or reject invite', {'accepted': accepted, 'token': msg.from_token, 'from_token': user_token});
 		if (accepted) room = msg.from_token;
 	}
 
 	// THE OTHER USER ACCEPTED TO JOIN THE ROOM
 	if (msg.accepted) {
+		console.log("Ele aceitou!");
 		room = msg.token;
 		isInitiator = true;
 		maybeStart();
@@ -79,12 +75,18 @@ socket.on('error', function(msg) {
 
 	if (msg.user_leave) {
 		if (msg.has_to_leave) {
-			socket.emit('leave', {'token': msg.from_token});
+			socket.emit('leave', {'leave_room': true, 'token': msg.from_token, 'from_token': user_token});
+			handleRemoteHangup();
 			console.log("The other user has left. Leaving room...")	;
 		} else {
+			socket.emit('leave', {'leave_room': false, 'token': msg.from_token, 'from_token': user_token});
+			hangup();
 			console.log("The other user has left. You are the owner of the room.")
 		}
-		resetToDefault();
+	}
+
+	if (msg.invalid_token) {
+		console.log(msg.text);
 	}
 
 	if (msg.rejected) {
@@ -98,7 +100,7 @@ function inviteUser(user) {
 }
 
 window.onbeforeunload = function(e) {
-	socket.emit('leaving', {'token': room, 'is_owner': isInitiator});
+	if (room != null) socket.emit('leaving', {'token': user_token, 'room': room, 'is_owner': isInitiator});
 	socket.disconnect();
 }
 
@@ -106,10 +108,31 @@ socket.on('log', function (array) {
 	console.log.apply(console, array);
 });
 
+function hangup() {
+	console.log('Hanging up.');
+	stop();
+	sendMessage('bye');
+}
+
+function handleRemoteHangup() {
+	console.log('Session terminated.');
+	stop();
+	isInitiator = false;
+	room = null;
+}
+
+function stop() {
+	isStarted = false;
+ 	// isAudioMuted = false;
+ 	// isVideoMuted = false;
+ 	pc.close();
+ 	pc = room = null;
+}
+
 ////////////////////////////////////////////////
 
 function sendMessage(message){
-	socket.emit('message', message);
+	socket.emit('message', {'room': room, 'text': message});
 }
 
 socket.on('message', function (message){
@@ -192,8 +215,8 @@ function sendData() {
 	else receiveChannel.send(data);
 	receiveTextarea.value += data+"\n";
 	receiveTextarea.scrollTop = receiveTextarea.scrollHeight;
-	dataChannelSend.focus();
-	dataChannelSend.value = "";
+	sendTextarea.focus();
+	sendTextarea.value = "";
 
 	trace('Sent data: ' + data);
 }
@@ -230,14 +253,18 @@ function handleSendChannelStateChange() {
 	var readyState = sendChannel.readyState;
 	trace('Send channel state is: ' + readyState);
 	if (readyState == "open") {
-		dataChannelSend.disabled = false;
-		dataChannelSend.focus();
-		dataChannelSend.placeholder = "";
+		sendTextarea.disabled = false;
+		sendTextarea.focus();
+		sendTextarea.placeholder = "";
 		sendButton.disabled = false;
 //    closeButton.disabled = false;
 } else {
-	dataChannelSend.disabled = true;
+	trace(sendTextarea.disabled);
+	sendTextarea.disabled = true;
 	sendButton.disabled = true;
+	sendTextarea.value = "";
+	sendTextarea.placeholder = "Press Start, enter some text, then press Send.";
+	receiveTextarea.value = "";
   //    closeButton.disabled = true;
 }
 }
@@ -245,10 +272,19 @@ function handleSendChannelStateChange() {
 function handleReceiveChannelStateChange() {
 	var readyState = receiveChannel.readyState;
 	trace('Receive channel state is: ' + readyState);
-	dataChannelSend.disabled = false;
-	dataChannelSend.focus();
-	dataChannelSend.placeholder = "";
-	sendButton.disabled = false;
+	trace("Buuuuuuuuuuu"+sendTextarea.disabled);
+	if (readyState == "open") {
+		sendTextarea.focus();
+		sendTextarea.placeholder = "";
+		sendTextarea.disabled = false;
+		sendButton.disabled = false;
+	} else {
+		sendTextarea.placeholder = "Press Start, enter some text, then press Send.";
+		sendTextarea.value = "";
+		receiveTextarea.value = "";
+		sendTextarea.disabled = true;
+		sendButton.disabled = true;
+	}
 }
 
 function handleIceCandidate(event) {
@@ -328,26 +364,6 @@ function requestTurn(turn_url) {
 	xhr.open('GET', turn_url, true);
 	xhr.send();
 }
-}
-
-function hangup() {
-	console.log('Hanging up.');
-	stop();
-	sendMessage('bye');
-}
-
-function handleRemoteHangup() {
-	console.log('Session terminated.');
-	stop();
-	isInitiator = false;
-}
-
-function stop() {
-	isStarted = false;
-  // isAudioMuted = false;
-  // isVideoMuted = false;
-  pc.close();
-  pc = null;
 }
 
 ///////////////////////////////////////////

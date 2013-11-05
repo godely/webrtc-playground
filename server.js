@@ -31,6 +31,9 @@ var serv = http.createServer(app).listen(app.get('port'), function() {
 var io = require('socket.io').listen(serv);
 io.set('log level', 1);
 
+var clients = {}
+var isChatting = {}
+
 io.of('/chat').on('connection', function(socket) {
 
 	function log(){
@@ -53,6 +56,8 @@ io.of('/chat').on('connection', function(socket) {
 						socket.set('pass', pass);
 						socket.set('token', newToken);
 						socket.join(newToken);
+						clients[newToken] = socket;
+						isChatting[newToken] = false;
 						socket.emit('success', {'connected': true, 'text': "User " + user + " created room " + newToken, 'token': newToken, 'user': user});
 					} else {
 						socket.emit('error', {'not_connected': true, 'text': "User " + user + " was unable to update its room token."});
@@ -71,27 +76,18 @@ io.of('/chat').on('connection', function(socket) {
 		AM.findByUsername(to_user, function(e, o) {
 			if (!e) {
 				var to_token = o.token;
-				var numClients = io.of('/chat').clients(to_token).length;
-
-				if (numClients < 1) {
-					socket.emit('error', {'invalid_token': true, 'text': "You tried to connect to an invalid token."});
-				} else if (numClients > 1) {
-					socket.emit('error', {'invalid_token': true, 'text': "You tried to connect to an used token."});
+				if (isChatting[to_token]) {
+					console.log("OIII");
+					socket.emit('error', {'invalid_token': true, 'text': "You are trying to connect to an user that is already talking to someone."});
+				} else if (isChatting[from_token]) {
+					console.log("OIIIIII");
+					socket.emit('error', {'invalid_token': true, 'text': "You are already chatting with someone or waiting for the response."});
 				} else {
-					//Not sure if that works to get the actual to_token socket
-					var to_socket = io.of('/chat').clients(to_token)[0];
-
-					//We subtract 2 because these two rooms are the '' and '/chat' namespaces respectively
-
-					var to_numRooms = Object.keys(io.sockets.manager.roomClients[to_socket.id]).length - 2;
-
-					if (to_numRooms != 1) {
-						socket.emit('error', {'invalid_token': true, 'text': "You are trying to connect to an user that is already talking to someone."});
-					} else {
-						msg.invited = true;
-						msg.text = 'User ' + from_user + ' invited you to chat.';
-						to_socket.emit('success', msg);
-					}
+					var to_socket = clients[to_token];
+					isChatting[from_token] = true;
+					msg.invited = true;
+					msg.text = 'User ' + from_user + ' invited you to chat.';
+					to_socket.emit('success', msg);
 				}
 			}
 		});
@@ -99,27 +95,34 @@ io.of('/chat').on('connection', function(socket) {
 
 	socket.on('accept or reject invite', function(msg) {
 		//Ajeitar os casos em que to_socket é undefined
-		var to_socket = io.of('/chat').clients(msg.token)[0];
+		var to_socket = clients[msg.token];
 		if (msg.accepted) {
+			socket.join(msg.token);
+			isChatting[msg.from_token] = true;
+			console.log(msg.from_token);
 			to_socket.emit('success', {'accepted': true, 'token': msg.token});
 		} else {
+			isChatting[msg.token] = false;
 			to_socket.emit('error', {'rejected': true});
 		}
 	});
 
 	// This user is leaving the room, and is broadcasting to all current users in this room.
 	socket.on('leaving', function (msg) {
-		socket.broadcast.to(msg.token).emit('error', {'user_leave': true, 'has_to_leave': msg.isInitiator, 'token': msg.token});
+		delete clients[msg.token];
+		delete isChatting[msg.token];
+		socket.broadcast.to(msg.room).emit('error', {'user_leave': true, 'has_to_leave': msg.is_owner, 'token': msg.room});
 	});
 
 	// This user has to leave this room because the owner has left
 	socket.on('leave', function(msg) {
-		socket.leave(msg.token);
+		isChatting[msg.from_token] = false;
+		if (msg.leave_room) socket.leave(msg.token);
 	});
 
-	socket.on('message', function (message) {
-		log('Got message: ', message);
-		socket.broadcast.emit('message', message); // should be room only
+	socket.on('message', function (msg) {
+		log('Got message: ', msg);
+		socket.broadcast.to(msg.room).emit('message', msg.text);
 	});
 });
 

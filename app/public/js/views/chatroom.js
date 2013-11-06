@@ -43,57 +43,61 @@ var socket = io.connect('/chat');
 
 socket.emit('connect', cookies);
 
-socket.on('success', function(msg) {
-	// CONNECTED SOCKET TO SERVER
-	if (msg.connected) {
-		console.log(msg.text);
-		user_name = msg.user;
-		user_token = msg.token;
-	}
+//SUCCESS
+//This message is sent by the server when the connection has succeeded
+socket.on('connected', function(msg) {
+	user_name = msg.user;
+	user_token = msg.token;
+	console.log("User " + user_name + " created room " + user_token);
+});
 
-	// INVITED TO JOIN A ROOM
-	if (msg.invited) {
-		var accepted = confirm(msg.text);
-		socket.emit('accept or reject invite', {'accepted': accepted, 'token': msg.from_token, 'from_token': user_token});
-		if (accepted) room = msg.from_token;
-	}
+//This message is sent by the other user through the server when he has invited you to chat.
+socket.on('invited', function(msg) {
+	var accepted = confirm('User ' + msg.from_user + ' invited you to chat.');
+	socket.emit('accept or reject invite', {'accepted': accepted, 'token': msg.from_token, 'from_token': user_token});
+	if (accepted) room = msg.from_token;
+});
 
-	// THE OTHER USER ACCEPTED TO JOIN THE ROOM
-	if (msg.accepted) {
-		console.log("Ele aceitou!");
-		room = msg.token;
-		isInitiator = true;
-		maybeStart();
+//This message is sent by the other user through the server when he has accepted the invitation to chat.
+socket.on('accepted invitation', function(msg) {
+	room = msg.token;
+	isInitiator = true;
+	maybeStart();
+});
+
+//ERRORS
+
+//This message is sent by the server when the user authentication has failed somehow.
+socket.on('not_connected', function(msg) {
+	window.location = "../";
+});
+
+//This message is sent by the server when the other user has left the chatroom
+socket.on('user_leave', function(msg) {
+	if (msg.has_to_leave) {
+		socket.emit('leave', {'leave_room': true, 'token': msg.from_token, 'from_token': user_token});
+		handleRemoteHangup();
+		console.log("The other user has left. Leaving room...")	;
+	} else {
+		socket.emit('leave', {'leave_room': false, 'token': msg.from_token, 'from_token': user_token});
+		hangup();
+		console.log("The other user has left. You are the owner of the room.")
 	}
 });
 
-socket.on('error', function(msg) {
-	if (msg.not_connected) {
-		console.log(msg.text);
-		window.location = "../";
-	}
-
-	if (msg.user_leave) {
-		if (msg.has_to_leave) {
-			socket.emit('leave', {'leave_room': true, 'token': msg.from_token, 'from_token': user_token});
-			handleRemoteHangup();
-			console.log("The other user has left. Leaving room...")	;
-		} else {
-			socket.emit('leave', {'leave_room': false, 'token': msg.from_token, 'from_token': user_token});
-			hangup();
-			console.log("The other user has left. You are the owner of the room.")
-		}
-	}
-
-	if (msg.invalid_token) {
-		console.log(msg.text);
-	}
-
-	if (msg.rejected) {
-		alert("The user rejected to join a room with you.");
+//This message is sent by the server when the current client is trying to chat with an user with an invalid token.
+socket.on('invalid_token', function(msg) {
+	if (msg.type == 'user_occupied') {
+		alert("You are trying to connect to an user that is already talking to someone.");
+	} else if (msg.type == 'this_occupied') {
+		alert("You are already chatting with someone or waiting for the response.");
 	}
 });
 
+//This message is sent by the other user through the server when he rejected the invitation to chat.
+socket.on('rejected invitation', function(msg) {
+	alert("The user rejected to join a room with you.");
+});
 
 function inviteUser(user) {
 	socket.emit('invite', {'from_user': user_name, 'from_token': user_token, 'to_user': user});

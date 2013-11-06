@@ -58,13 +58,13 @@ io.of('/chat').on('connection', function(socket) {
 						socket.join(newToken);
 						clients[newToken] = socket;
 						isChatting[newToken] = false;
-						socket.emit('success', {'connected': true, 'text': "User " + user + " created room " + newToken, 'token': newToken, 'user': user});
+						socket.emit('connected', {'token': newToken, 'user': user});
 					} else {
-						socket.emit('error', {'not_connected': true, 'text': "User " + user + " was unable to update its room token."});
+						socket.emit('not_connected');
 					}
 				});
 			} else {
-				socket.emit('error', {'not_connected': true, 'text': "User " + user + " was unable to authenticate."});
+				socket.emit('not_connected');
 			}
 		});
 	});
@@ -77,17 +77,13 @@ io.of('/chat').on('connection', function(socket) {
 			if (!e) {
 				var to_token = o.token;
 				if (isChatting[to_token]) {
-					console.log("OIII");
-					socket.emit('error', {'invalid_token': true, 'text': "You are trying to connect to an user that is already talking to someone."});
+					socket.emit('invalid_token', {'type': 'user_occupied'});
 				} else if (isChatting[from_token]) {
-					console.log("OIIIIII");
-					socket.emit('error', {'invalid_token': true, 'text': "You are already chatting with someone or waiting for the response."});
+					socket.emit('invalid_token', {'type': 'this_occupied'});
 				} else {
 					var to_socket = clients[to_token];
 					isChatting[from_token] = true;
-					msg.invited = true;
-					msg.text = 'User ' + from_user + ' invited you to chat.';
-					to_socket.emit('success', msg);
+					to_socket.emit('invited', msg);
 				}
 			}
 		});
@@ -100,10 +96,10 @@ io.of('/chat').on('connection', function(socket) {
 			socket.join(msg.token);
 			isChatting[msg.from_token] = true;
 			console.log(msg.from_token);
-			to_socket.emit('success', {'accepted': true, 'token': msg.token});
+			to_socket.emit('accepted invitation', {'token': msg.token});
 		} else {
 			isChatting[msg.token] = false;
-			to_socket.emit('error', {'rejected': true});
+			to_socket.emit('rejected invitation');
 		}
 	});
 
@@ -111,7 +107,7 @@ io.of('/chat').on('connection', function(socket) {
 	socket.on('leaving', function (msg) {
 		delete clients[msg.token];
 		delete isChatting[msg.token];
-		socket.broadcast.to(msg.room).emit('error', {'user_leave': true, 'has_to_leave': msg.is_owner, 'token': msg.room});
+		socket.broadcast.to(msg.room).emit('user_leave', {'has_to_leave': msg.is_owner, 'token': msg.room});
 	});
 
 	// This user has to leave this room because the owner has left

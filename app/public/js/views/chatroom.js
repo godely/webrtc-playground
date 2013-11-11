@@ -54,14 +54,14 @@ socket.on('connected', function(msg) {
 //This message is sent by the other user through the server when he has invited you to chat.
 socket.on('invited', function(msg) {
 	var accepted = confirm('User ' + msg.from_user + ' invited you to chat.');
-	socket.emit('accept or reject invite', {'accepted': accepted, 'token': msg.from_token, 'from_token': user_token});
+	socket.emit('accept or reject invite', {'accepted': accepted, 'room': msg.from_token, 'from_token': user_token});
 	if (accepted) room = msg.from_token;
 });
 
 //This message is sent by the other user through the server when he has accepted the invitation to chat.
 socket.on('accepted invitation', function(msg) {
-	room = msg.token;
-	isInitiator = true;
+	sendMessage("Eba! Fulaninho aceitou!");
+	console.log("EbaEBAEBABEBAEABEABEABEABEABEA! FUlaninho aceitou!");
 	maybeStart();
 });
 
@@ -96,11 +96,21 @@ socket.on('invalid_token', function(msg) {
 
 //This message is sent by the other user through the server when he rejected the invitation to chat.
 socket.on('rejected invitation', function(msg) {
-	alert("The user rejected to join a room with you.");
+	if (msg.counter == 0) {
+		pc = room = null;
+		isInitiator = false;
+		alert("The user rejected to join a room with you.");
+	} else {
+		sendMessage("The user rejected to join this room.");
+	}
 });
 
 function inviteUser(user) {
-	socket.emit('invite', {'from_user': user_name, 'from_token': user_token, 'to_user': user});
+	if (room == null) {
+		room = user_token;
+		isInitiator = true;
+	}
+	socket.emit('invite', {'from_user': user_name, 'from_token': user_token, 'to_user': user, 'is_owner': isInitiator});
 }
 
 window.onbeforeunload = function(e) {
@@ -152,7 +162,7 @@ socket.on('message', function (message){
 	} else if (message.type === 'candidate' && isStarted) {
 		var candidate = new RTCIceCandidate({sdpMLineIndex:message.label,
 			candidate:message.candidate});
-		pc.addIceCandidate(candidate);
+		pc.addIceCandidate(candidate, function() { console.log("OK!!"); }, function() { console.log("ERRO!!"); });
 	} else if (message === 'bye' && isStarted) {
 		handleRemoteHangup();
 	}
@@ -163,14 +173,12 @@ socket.on('message', function (message){
 requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
 
 function maybeStart() {
-	if (!isStarted) {
 		console.log('Is starting!');
 		createPeerConnection();
 		isStarted = true;
 		if (isInitiator) {
 			doCall();
 		}
-	}
 }
 
 /////////////////////////////////////////////////////////

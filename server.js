@@ -57,7 +57,7 @@ io.of('/chat').on('connection', function(socket) {
 						socket.set('token', newToken);
 						socket.join(newToken);
 						clients[newToken] = socket;
-						isChatting[newToken] = false;
+						isChatting[newToken] = 0;
 						socket.emit('connected', {'token': newToken, 'user': user});
 					} else {
 						socket.emit('not_connected');
@@ -76,13 +76,13 @@ io.of('/chat').on('connection', function(socket) {
 		AM.findByUsername(to_user, function(e, o) {
 			if (!e) {
 				var to_token = o.token;
-				if (isChatting[to_token]) {
+				if (isChatting[to_token] > 0) {
 					socket.emit('invalid_token', {'type': 'user_occupied'});
-				} else if (isChatting[from_token]) {
+				} else if (isChatting[from_token] > 0 && !msg.is_owner) {
 					socket.emit('invalid_token', {'type': 'this_occupied'});
 				} else {
 					var to_socket = clients[to_token];
-					isChatting[from_token] = true;
+					isChatting[from_token]++;
 					to_socket.emit('invited', msg);
 				}
 			}
@@ -91,15 +91,14 @@ io.of('/chat').on('connection', function(socket) {
 
 	socket.on('accept or reject invite', function(msg) {
 		//Ajeitar os casos em que to_socket é undefined
-		var to_socket = clients[msg.token];
 		if (msg.accepted) {
-			socket.join(msg.token);
-			isChatting[msg.from_token] = true;
+			socket.join(msg.room);
+			isChatting[msg.from_token]++;
 			console.log(msg.from_token);
-			to_socket.emit('accepted invitation', {'token': msg.token});
+			socket.broadcast.to(msg.room).emit('accepted invitation', {'token': msg.token});
 		} else {
-			isChatting[msg.token] = false;
-			to_socket.emit('rejected invitation');
+			isChatting[msg.token]--;
+			socket.broadcast.to(msg.room).emit('rejected invitation', {'counter': isChatting[msg.token]});
 		}
 	});
 
@@ -110,10 +109,15 @@ io.of('/chat').on('connection', function(socket) {
 		socket.broadcast.to(msg.room).emit('user_leave', {'has_to_leave': msg.is_owner, 'token': msg.room});
 	});
 
-	// This user has to leave this room because the owner has left
+	// This user has to leave the room and set its mates counter to 0 if he's not the owner
+	// Otherwise he'll just decrease the counter
 	socket.on('leave', function(msg) {
-		isChatting[msg.from_token] = false;
-		if (msg.leave_room) socket.leave(msg.token);
+		if (msg.leave_room) {
+			isChatting[msg.from_token] = 0;
+			socket.leave(msg.token);
+		} else {
+			isChatting[msg.from_token]--;
+		}
 	});
 
 	socket.on('message', function (msg) {
